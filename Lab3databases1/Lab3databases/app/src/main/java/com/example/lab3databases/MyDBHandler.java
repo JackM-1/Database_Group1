@@ -51,4 +51,21 @@ public class MyDBHandler extends SQLiteOpenHelper {
         db.insert(TABLE_NAME, null, values);
         db.close();
     }
+
+    public Product findProduct(String productName) {
+        SQLiteDatabase db = this.getReadableDatabase();
+
+    }
+
+    public void deleteProduct(String productName) {
+        SQLiteDatabase db = this.getWritableDatabase();
+
+        ContentValues values = new ContentValues();
+
+        values.put(COLUMN_PRODUCT_NAME, product.getProductName());
+        values.put(COLUMN_PRODUCT_PRICE, product.getProductPrice());
+
+        db.delete(TABLE_NAME, null, values);
+        db.close();
+    }
 }
