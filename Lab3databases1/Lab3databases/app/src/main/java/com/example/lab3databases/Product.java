@@ -5,12 +5,11 @@ public class Product {
     private String productName;
     private double productPrice;
 
-    public Product() {
-    }
+    public Product() {}
 
-    public Product(String productName, double productPrice) {
-        this.productName = productName;
-        this.productPrice = productPrice;
+    public Product(String name, double price) {
+        this.productName = name;
+        this.productPrice = price;
     }
 
     public int getId() {
@@ -35,5 +34,10 @@ public class Product {
 
     public void setProductPrice(double productPrice) {
         this.productPrice = productPrice;
+    }
+
+    @Override
+    public String toString() {
+        return productName + " - $" + String.format("%.2f", productPrice);
     }
 }

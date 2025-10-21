@@ -1,27 +1,16 @@
 package com.example.lab3databases;
 
 import androidx.appcompat.app.AppCompatActivity;
-
-import android.database.Cursor;
 import android.os.Bundle;
 import android.view.View;
-import android.widget.ArrayAdapter;
-import android.widget.Button;
-import android.widget.EditText;
-import android.widget.ListView;
-import android.widget.TextView;
-import android.widget.Toast;
-
-import java.util.ArrayList;
+import android.widget.*;
+import java.util.List;
 
 public class MainActivity extends AppCompatActivity {
-    TextView productId;
-    EditText productName, productPrice;
+
+    EditText productNameInput, productPriceInput;
     Button addBtn, findBtn, deleteBtn;
     ListView productListView;
-
-    ArrayList<String> productList;
-    ArrayAdapter adapter;
     MyDBHandler dbHandler;
 
     @Override
@@ -29,71 +18,111 @@ public class MainActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
 
-        productList = new ArrayList<>();
-
-        // info layout
-        productId = findViewById(R.id.productId);
-        productName = findViewById(R.id.productName);
-        productPrice = findViewById(R.id.productPrice);
-
-        //buttons
+        // hook up everything from layout
+        productNameInput = findViewById(R.id.productName);
+        productPriceInput = findViewById(R.id.productPrice);
         addBtn = findViewById(R.id.addBtn);
         findBtn = findViewById(R.id.findBtn);
         deleteBtn = findViewById(R.id.deleteBtn);
-
-        // listview
         productListView = findViewById(R.id.productListView);
 
-        // db handler
         dbHandler = new MyDBHandler(this);
 
-        // button listeners
-        addBtn.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                String name = productName.getText().toString();
-                double price = Double.parseDouble(productPrice.getText().toString());
-                Product product = new Product(name, price);
-                dbHandler.addProduct(product);
+        // button clicks
+        addBtn.setOnClickListener(v -> addProduct());
+        findBtn.setOnClickListener(v -> findProducts());
+        deleteBtn.setOnClickListener(v -> deleteProduct());
 
-                productName.setText("");
-                productPrice.setText("");
-
-//                Toast.makeText(MainActivity.this, "Add product", Toast.LENGTH_SHORT).show();
-                viewProducts();
-            }
-        });
-
-        findBtn.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                Toast.makeText(MainActivity.this, "Find product", Toast.LENGTH_SHORT).show();
-            }
-        });
-
-        deleteBtn.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                Toast.makeText(MainActivity.this, "Delete product", Toast.LENGTH_SHORT).show();
-            }
-        });
-
-
-        viewProducts();
+        // show all products right away
+        loadAllProducts();
     }
 
-    private void viewProducts() {
-        productList.clear();
-        Cursor cursor = dbHandler.getData();
-        if (cursor.getCount() == 0) {
-            Toast.makeText(MainActivity.this, "Nothing to show", Toast.LENGTH_SHORT).show();
-        } else {
-            while (cursor.moveToNext()) {
-                productList.add(cursor.getString(1) + " (" +cursor.getString(2)+")");
-            }
+    private void addProduct() {
+        String name = productNameInput.getText().toString().trim();
+        String priceText = productPriceInput.getText().toString().trim();
+
+        if (name.isEmpty() || priceText.isEmpty()) {
+            Toast.makeText(this, "enter both name and price", Toast.LENGTH_SHORT).show();
+            return;
         }
 
-        adapter = new ArrayAdapter<>(this, android.R.layout.simple_list_item_1, productList);
+        double price;
+        try {
+            price = Double.parseDouble(priceText);
+        } catch (NumberFormatException e) {
+            Toast.makeText(this, "invalid price format", Toast.LENGTH_SHORT).show();
+            return;
+        }
+
+        // make new product and add to db
+        Product product = new Product(name, price);
+        dbHandler.addProduct(product);
+
+        Toast.makeText(this, "product added", Toast.LENGTH_SHORT).show();
+        productNameInput.setText("");
+        productPriceInput.setText("");
+        loadAllProducts();
+    }
+
+    private void loadAllProducts() {
+        List<Product> products = dbHandler.getAllProducts();
+        ArrayAdapter<Product> adapter = new ArrayAdapter<>(this, android.R.layout.simple_list_item_1, products);
         productListView.setAdapter(adapter);
+    }
+
+    private void findProducts() {
+        String name = productNameInput.getText().toString().trim();
+        String priceText = productPriceInput.getText().toString().trim();
+
+        boolean hasName = !name.isEmpty();
+        boolean hasPrice = !priceText.isEmpty();
+        List<Product> results;
+
+        if (hasName && hasPrice) {
+            // both fields filled in
+            double price;
+            try {
+                price = Double.parseDouble(priceText);
+            } catch (NumberFormatException e) {
+                Toast.makeText(this, "invalid price format", Toast.LENGTH_SHORT).show();
+                return;
+            }
+            results = dbHandler.findProductsByNameAndPrice(name, price);
+        } else if (hasName) {
+            // only name entered
+            results = dbHandler.findProductsByName(name);
+        } else if (hasPrice) {
+            // only price entered
+            double price;
+            try {
+                price = Double.parseDouble(priceText);
+            } catch (NumberFormatException e) {
+                Toast.makeText(this, "invalid price format", Toast.LENGTH_SHORT).show();
+                return;
+            }
+            results = dbHandler.findProductsByPrice(price);
+        } else {
+            // no filters, show all
+            results = dbHandler.getAllProducts();
+        }
+
+        ArrayAdapter<Product> adapter = new ArrayAdapter<>(this, android.R.layout.simple_list_item_1, results);
+        productListView.setAdapter(adapter);
+
+        if (results.isEmpty()) {
+            Toast.makeText(this, "no matches found", Toast.LENGTH_SHORT).show();
+        }
+    }
+
+    private void deleteProduct() {
+        String name = productNameInput.getText().toString().trim();
+        if (name.isEmpty()) {
+            Toast.makeText(this, "enter product name to delete", Toast.LENGTH_SHORT).show();
+            return;
+        }
+        dbHandler.deleteProduct(name);
+        Toast.makeText(this, "product deleted (if it existed)", Toast.LENGTH_SHORT).show();
+        productNameInput.setText("");
+        loadAllProducts();
     }
 }
